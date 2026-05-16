@@ -1,3 +1,8 @@
+# RISC-V Formal for RIDECORE
+This fork connects RVFI to RIDECORE for RISC-V Formal use.
+
+For formal analysis, this branch changes the BTB/PHT from the original `negedge clk` synchronous-read timing to `posedge clk` updates with combinational reads through `ram_sync_nolatch`. This should not affect ISA-visible architectural state, but predictor updates may become visible to fetch earlier than in the original implementation. As a result, the formal model may show minor cycle-by-cycle prediction differences, such as BTB hit timing or PHT direction.
+
 # Introduction  
 RIDECORE (RIsc-v Dynamic Execution CORE) is an Out-of-Order processor written in Verilog HDL. RIDECORE implements RISC-V, an open-source ISA that was originally designed by researchers at UC Berkeley (<http://www.riscv.org>).
 

@@ -142,32 +142,16 @@ module pht(
 	   input wire 			 we_ex
 	   );
    
-   true_dualport_ram #(`GSH_PHT_SEL, 2, `GSH_PHT_NUM) pht0
+   ram_sync_nolatch_2r1w #(`GSH_PHT_SEL, 2, `GSH_PHT_NUM) pht0
      (
-      .clka(~clk),
-      .addra(raddr_if),
-      .rdataa(rdata_if),
-      .wdataa(),
-      .wea(1'b0),
-      .clkb(clk),
-      .addrb(waddr_ex),
-      .rdatab(),
-      .wdatab(wdata_ex),
-      .web(we_ex)
-      );
-   
-   true_dualport_ram #(`GSH_PHT_SEL, 2, `GSH_PHT_NUM) pht1
-     (
-      .clka(~clk),
-      .addra(raddr_ex),
-      .rdataa(rdata_ex),
-      .wdataa(),
-      .wea(1'b0),
-      .clkb(clk),
-      .addrb(waddr_ex),
-      .rdatab(),
-      .wdatab(wdata_ex),
-      .web(we_ex)
+      .clk(clk),
+      .raddr1(raddr_if),
+      .raddr2(raddr_ex),
+      .rdata1(rdata_if),
+      .rdata2(rdata_ex),
+      .waddr(waddr_ex),
+      .wdata(wdata_ex),
+      .we(we_ex)
       );
    
 endmodule // pht

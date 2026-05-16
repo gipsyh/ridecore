@@ -23,7 +23,7 @@ module btb(
 					  && valid[pc[3+:`BTB_IDX_SEL]]) ? 1'b1 : 1'b0;
    assign hit = hit1 | hit2;
 		
-   always @ (negedge clk) begin
+   always @ (posedge clk) begin
       if (reset) begin
 	 valid <= 0;
       end else begin
@@ -33,9 +33,9 @@ module btb(
       end
    end
    
-   ram_sync_1r1w #(`BTB_IDX_SEL, `ADDR_LEN, `BTB_IDX_NUM) bia
+   ram_sync_nolatch_1r1w #(`BTB_IDX_SEL, `ADDR_LEN, `BTB_IDX_NUM) bia
      (
-      .clk(~clk),
+      .clk(clk),
       .raddr1(pc[3+:`BTB_IDX_SEL]),
       .rdata1(tag_data),
       .waddr(waddr),
@@ -44,9 +44,9 @@ module btb(
       .we(we)
       );
 
-   ram_sync_1r1w #(`BTB_IDX_SEL, `ADDR_LEN, `BTB_IDX_NUM) bta
+   ram_sync_nolatch_1r1w #(`BTB_IDX_SEL, `ADDR_LEN, `BTB_IDX_NUM) bta
      (
-      .clk(~clk),
+      .clk(clk),
       .raddr1(pc[3+:`BTB_IDX_SEL]),
       .rdata1(jmpaddr),
       .waddr(waddr),
