@@ -13,7 +13,8 @@ module pipeline
    output wire [`DATA_LEN-1:0] 	dmem_wdata,
    output wire 			dmem_we,
    output wire [`ADDR_LEN-1:0] 	dmem_addr,
-   input wire [`DATA_LEN-1:0] 	dmem_data
+   input wire [`DATA_LEN-1:0] 	dmem_data,
+   `RVFI_OUTPUTS
    );
    wire  stall_IF;
    wire  kill_IF;
@@ -398,6 +399,7 @@ module pipeline
    wire 		       memoccupy_ld;
    wire [`ADDR_LEN-1:0]        ldaddr;
    wire [`DATA_LEN-1:0]        lddatasb;
+   wire [`DATA_LEN-1:0]        lddatarvfi;
    wire [`ADDR_LEN-1:0]        retaddr;
    wire [`DATA_LEN-1:0]        storedata;
    wire [`ADDR_LEN-1:0]        storeaddr;
@@ -471,6 +473,7 @@ module pipeline
    wire 		   brcond_combranch;
    wire 		   combranch;
    wire [`ADDR_LEN-1:0]    jmpaddr_combranch;
+   reg [63:0] rvfi_order_cnt = 0;
    
    //IF Stage********************************************************
 //   assign stall_IF = stall_ID;
@@ -1694,6 +1697,7 @@ module pipeline
    end // always @ (posedge clk)
 
    assign dmem_addr = (memoccupy_ld) ? ldaddr : retaddr;
+   assign lddatarvfi = hitsb ? lddatasb : dmem_data;
 
 /*   
    dmem datamemory(
@@ -1882,6 +1886,9 @@ module pipeline
 		  .dp1(~stall_DP & ~kill_DP & ~inv1_id),
 		  .dp1_addr(dst1_renamed),
 		  .pc_dp1(pc_id),
+		  .inst_dp1(inst1_id),
+		  .rs1_dp1(uses_rs1_1_id ? rs1_1_id : `REG_SEL'b0),
+		  .rs2_dp1(uses_rs2_1_id ? rs2_1_id : `REG_SEL'b0),
 		  .storebit_dp1(inst1_id[6:0] == `RV32_STORE ? 1'b1 : 1'b0),
 		  .dstvalid_dp1(wr_reg_1_id),
 		  .dst_dp1(rd_1_id),
@@ -1890,6 +1897,9 @@ module pipeline
 		  .dp2(~stall_DP & ~kill_DP & ~inv2_id),
 		  .dp2_addr(dst2_renamed),
 		  .pc_dp2(pc_id + 4),
+		  .inst_dp2(inst2_id),
+		  .rs1_dp2(uses_rs1_2_id ? rs1_2_id : `REG_SEL'b0),
+		  .rs2_dp2(uses_rs2_2_id ? rs2_2_id : `REG_SEL'b0),
 		  .storebit_dp2(inst2_id[6:0] == `RV32_STORE ? 1'b1 : 1'b0),
 		  .dstvalid_dp2(wr_reg_2_id),
 		  .dst_dp2(rd_2_id),
@@ -1897,16 +1907,31 @@ module pipeline
 		  .isbranch_dp2(req2_branch),
 		  .exfin_alu1(robwe_alu1),
 		  .exfin_alu1_addr(buf_rrftag_alu1),
+		  .exfin_alu1_rs1_rdata(buf_ex_src1_alu1),
+		  .exfin_alu1_rs2_rdata(buf_ex_src2_alu1),
 		  .exfin_alu2(robwe_alu2),
 		  .exfin_alu2_addr(buf_rrftag_alu2),
+		  .exfin_alu2_rs1_rdata(buf_ex_src1_alu2),
+		  .exfin_alu2_rs2_rdata(buf_ex_src2_alu2),
 		  .exfin_mul(robwe_mul),
 		  .exfin_mul_addr(buf_rrftag_mul),
+		  .exfin_mul_rs1_rdata(buf_ex_src1_mul),
+		  .exfin_mul_rs2_rdata(buf_ex_src2_mul),
 		  .exfin_ldst(robwe_ldst),
 		  .exfin_ldst_addr(wrrftag_ldst),
+		  .exfin_ldst_rs1_rdata(buf_ex_src1_ldst),
+		  .exfin_ldst_rs2_rdata(buf_ex_src2_ldst),
+		  .exfin_ldst_mem_addr(buf_ex_src1_ldst + buf_imm_ldst),
+		  .exfin_ldst_mem_rdata(lddatarvfi),
+		  .exfin_ldst_mem_wdata(storedata),
 		  .exfin_branch(robwe_branch),
 		  .exfin_branch_addr(buf_rrftag_branch),
+		  .exfin_branch_rs1_rdata(buf_ex_src1_branch),
+		  .exfin_branch_rs2_rdata(buf_ex_src2_branch),
 		  .exfin_branch_brcond(brcond),
 		  .exfin_branch_jmpaddr(jmpaddr_taken),
+		  .com1data(com1data),
+		  .com2data(com2data),
 
 		  .comptr(comptr),
 		  .comptr2(comptr2),
@@ -1921,10 +1946,43 @@ module pipeline
 		  .brcond_combranch(brcond_combranch),
 		  .jmpaddr_combranch(jmpaddr_combranch),
 		  .combranch(combranch),
+		  .rvfi_valid(rvfi_valid),
+		  .rvfi_insn(rvfi_insn),
+		  .rvfi_rs1_addr(rvfi_rs1_addr),
+		  .rvfi_rs2_addr(rvfi_rs2_addr),
+		  .rvfi_rs1_rdata(rvfi_rs1_rdata),
+		  .rvfi_rs2_rdata(rvfi_rs2_rdata),
+		  .rvfi_rd_addr(rvfi_rd_addr),
+		  .rvfi_rd_wdata(rvfi_rd_wdata),
+		  .rvfi_pc_rdata(rvfi_pc_rdata),
+		  .rvfi_pc_wdata(rvfi_pc_wdata),
+		  .rvfi_mem_addr(rvfi_mem_addr),
+		  .rvfi_mem_rmask(rvfi_mem_rmask),
+		  .rvfi_mem_wmask(rvfi_mem_wmask),
+		  .rvfi_mem_rdata(rvfi_mem_rdata),
+		  .rvfi_mem_wdata(rvfi_mem_wdata),
 		  .dispatchptr(rrfptr),
 		  .rrf_freenum(freenum),
 		  .prmiss(prmiss)
 		  );
+
+   always @(posedge clk) begin
+      if (reset) begin
+	 rvfi_order_cnt <= 0;
+      end else begin
+	 rvfi_order_cnt <= rvfi_order_cnt + rvfi_valid[0] + rvfi_valid[1];
+      end
+   end
+
+   assign rvfi_order = {
+      rvfi_order_cnt + {63'b0, rvfi_valid[0]},
+      rvfi_order_cnt
+   };
+   assign rvfi_trap = 2'b00;
+   assign rvfi_halt = 2'b00;
+   assign rvfi_intr = 2'b00;
+   assign rvfi_mode = {2'b11, 2'b11};
+   assign rvfi_ixl = {2'b01, 2'b01};
    
 endmodule // pipeline
 
