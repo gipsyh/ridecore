@@ -474,7 +474,7 @@ module pipeline
    wire 		   brcond_combranch;
    wire 		   combranch;
    wire [`ADDR_LEN-1:0]    jmpaddr_combranch;
-   reg [63:0] rvfi_order_cnt = 0;
+   reg [63:0] rvfi_order_cnt;
    
    //IF Stage********************************************************
 //   assign stall_IF = stall_ID;
